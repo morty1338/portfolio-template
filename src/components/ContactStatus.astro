@@ -1,0 +1,35 @@
+---
+import { site, type Locale } from '../config/site';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { localizePath } from '../i18n/routing';
+import { useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+  outcome: 'sent' | 'failed';
+}
+const { locale, outcome } = Astro.props;
+const t = useTranslations(locale);
+const title = t(outcome === 'sent' ? 'contact.sent.title' : 'contact.failed.title');
+const body = outcome === 'sent' ? t('contact.success') : t('contact.error', { email: site.email });
+---
+
+<BaseLayout locale={locale} title={title} description={title} noindex>
+  <div class="container page" role={outcome === 'failed' ? 'alert' : 'status'}>
+    <h1>{title}</h1>
+    <p class="lead">{body}</p>
+    <a class="button" href={localizePath('/contact/', locale)}>
+      {t('contact.back')}
+    </a>
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: var(--space-4);
+    justify-items: start;
+    padding-top: var(--space-6);
+    max-width: 60ch;
+  }
+</style>

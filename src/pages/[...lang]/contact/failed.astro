@@ -1,0 +1,10 @@
+---
+/* Landing page after a form post without JavaScript (the endpoint redirects here). */
+import ContactStatus from '../../../components/ContactStatus.astro';
+import { localeFromParam, localeStaticPaths } from '../../../i18n/routing';
+
+export const getStaticPaths = localeStaticPaths;
+const locale = localeFromParam(Astro.params.lang);
+---
+
+<ContactStatus locale={locale} outcome="failed" />

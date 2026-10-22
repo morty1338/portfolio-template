@@ -24,6 +24,7 @@ const messages = {
   sending: t('contact.sending'),
   success: t('contact.success'),
   error: t('contact.error', { email: site.email }),
+  rateLimited: t('contact.rateLimited', { email: site.email }),
   regarding: t('contact.regarding'),
 };
 ---
@@ -180,13 +181,14 @@ const messages = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...result.data, website: '' }),
           });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.ok) throw new Error(response.status === 429 ? 'rate-limited' : `HTTP ${response.status}`);
         }
         form.reset();
         status.textContent = messages.success!;
         document.dispatchEvent(new CustomEvent('portfolio:track', { detail: { name: 'contact-sent' } }));
-      } catch {
-        status.textContent = messages.error!;
+      } catch (error) {
+        // Whatever went wrong, the visitor gets the e-mail address, and the typed text stays in the form.
+        status.textContent = (error as Error).message === 'rate-limited' ? messages.rateLimited! : messages.error!;
       } finally {
         button.disabled = false;
       }

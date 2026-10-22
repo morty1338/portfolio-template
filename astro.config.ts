@@ -13,8 +13,9 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      // Legal pages are noindex stubs until Phase 4; they don't belong in the sitemap.
-      filter: (page) => !/\/(impressum|datenschutz)\/$/.test(page),
+      // noindex pages stay out of the sitemap: legal stubs (until Phase 4) and the no-JS form result pages.
+      // scripts/check-dist.mjs fails the build if this list and the pages' robots tags disagree.
+      filter: (page) => !/\/(impressum|datenschutz|contact\/sent|contact\/failed)\/$/.test(page),
       i18n: {
         defaultLocale,
         locales: Object.fromEntries(site.locales.map((l) => [l, l])),

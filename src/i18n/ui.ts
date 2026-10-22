@@ -4,7 +4,7 @@
  * TODO(review): German strings need the site owner's review.
  * Instance data (name, job, city) never goes here: use {name} or the profile content.
  */
-import type { Locale } from '../config/site';
+import type { Locale } from '../config/locales';
 
 const en = {
   'skip.link': 'Skip to content',
@@ -92,6 +92,10 @@ const en = {
   'contact.success': 'Thanks! Your message was sent. You’ll get a confirmation e-mail shortly.',
   'contact.error': 'Your message couldn’t be sent. Please write to {email} instead.',
   'contact.required': 'required',
+  'contact.rateLimited': 'Too many messages in a short time. Try again later or write to {email}.',
+  'contact.sent.title': 'Message sent',
+  'contact.failed.title': 'Message not sent',
+  'contact.back': 'Back to the contact page',
   'contact.error.required': 'This field is required.',
   'contact.error.invalid': 'Enter a valid e-mail address, like name@company.com.',
   'contact.error.tooLong': 'This is too long (at most {max} characters).',
@@ -205,6 +209,11 @@ const de: Record<UiKey, string> = {
   'contact.success': 'Vielen Dank! Ihre Nachricht wurde gesendet. Sie erhalten gleich eine Bestätigung per E-Mail.',
   'contact.error': 'Die Nachricht konnte nicht gesendet werden. Bitte schreiben Sie mir an {email}.',
   'contact.required': 'Pflichtfeld',
+  'contact.rateLimited':
+    'Zu viele Nachrichten in kurzer Zeit. Bitte versuchen Sie es später erneut oder schreiben Sie an {email}.',
+  'contact.sent.title': 'Nachricht gesendet',
+  'contact.failed.title': 'Nachricht nicht gesendet',
+  'contact.back': 'Zurück zur Kontaktseite',
   'contact.error.required': 'Dieses Feld ist ein Pflichtfeld.',
   'contact.error.invalid': 'Geben Sie eine gültige E-Mail-Adresse ein, z. B. name@firma.de.',
   'contact.error.tooLong': 'Der Text ist zu lang (höchstens {max} Zeichen).',
