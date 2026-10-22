@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'astro/zod';
 import { contentRoot } from './content-root';
+import { LOCALES, defaultLocale, type Locale } from './locales';
 
 const siteSchema = z.object({
   name: z.string().min(1),
@@ -29,12 +30,10 @@ export const site = {
   ...instance,
   /** Endpoint the contact form posts to (implemented in Phase 2). */
   contactEndpoint: '/api/contact',
-  /** First entry is the default locale (served without a URL prefix). Add a locale here + translations to support it. */
-  locales: ['en', 'de'] as const,
+  locales: LOCALES,
 };
 
-export type Locale = (typeof site.locales)[number];
-export const defaultLocale: Locale = site.locales[0];
+export { defaultLocale, type Locale };
 
 /** True while a value still holds its placeholder; used to hide it from structured data. */
 export const isPlaceholder = (value: string) => value.includes('.example');
