@@ -16,7 +16,8 @@
     "test": "vitest run",
     "images:extract": "node scripts/extract-photos.mjs",
     "images:youtube": "node scripts/fetch-youtube-thumbnails.mjs",
-    "check:dist": "node scripts/check-dist.mjs"
+    "check:dist": "node scripts/check-dist.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "@playwright/test": "^1.64.1",
     "prettier": "^3.9.10",
     "prettier-plugin-astro": "^1.1.1",
     "sharp": "^0.35.5",
