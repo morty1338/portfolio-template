@@ -1,6 +1,6 @@
 /**
  * Guard for the template/instance split: no git-tracked file outside the content folders may contain
- * instance data (the owner's name, project slugs, titles, video/Drive IDs). Those live only in the
+ * instance data (the owner's name, project slugs, titles, video/Drive IDs; not the public site URL). Those live only in the
  * content root, so the code can be shared publicly while the content stays private.
  * The terms are read from the active content root, so the guard works for every instance.
  */
@@ -14,10 +14,13 @@ const SKIPPED =
   /^(content(-demo)?|node_modules|dist|\.astro|\.git|material|coverage|test-results|playwright-report)(\/|$)/;
 const BINARY = /\.(png|jpe?g|webp|avif|ico|woff2?|gif)$/i;
 
-/** Every file git tracks; without git (e.g. a downloaded ZIP of the template) every file on disk. */
+/** Every file git tracks or would track (new files too); without git (e.g. a downloaded ZIP of the template) every file on disk. */
 function projectFiles(): string[] {
   try {
-    return execFileSync('git', ['ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
       .split('\n')
       .filter(Boolean);
   } catch {
@@ -38,7 +41,6 @@ function instanceTerms(): string[] {
   const terms = new Set<string>();
   const site = JSON.parse(readFileSync(path.join(contentRoot, 'site.json'), 'utf8'));
   terms.add(site.name);
-  terms.add(new URL(site.url).hostname);
   const projects = path.join(contentRoot, 'projects');
   for (const slug of readdirSync(projects).filter((d) => !d.startsWith('_'))) {
     const md = readFileSync(path.join(projects, slug, 'index.md'), 'utf8');
