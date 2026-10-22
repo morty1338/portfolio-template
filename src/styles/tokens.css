@@ -1,0 +1,56 @@
+/*
+ * Design tokens: the only place with colour values and font stacks.
+ * NEUTRAL PLACEHOLDER THEME: the visual design will be briefed later; change values here, not in components.
+ *
+ * Contrast (WCAG AA ≥ 4.5:1, checked 2026-10-22): ink-1 on bg 16.0, ink-2 on bg 9.2,
+ * ink-3 on bg 5.9 / on surface-2 5.3, accent on bg 7.7, on-accent on accent 8.5, danger on white 6.5 / on bg 5.9.
+ *
+ * Breakpoints (CSS variables don't work in media queries, so they are listed here):
+ *   600px: phone → tablet (bottom tab bar becomes a header nav)
+ *   960px: tablet → desktop
+ *   max-height 820px (with min-width 600px): low desktop screens, compacter home hero
+ */
+:root {
+  color-scheme: light;
+
+  --bg: #f6f4ef;
+  --surface-1: #ffffff;
+  --surface-2: #ece8e0;
+  --surface-3: #dfd9ce;
+  --ink-1: #1a1917;
+  --ink-2: #45413b;
+  --ink-3: #625d55;
+  --line: #cfc8bb;
+  --accent: #1f45a8;
+  --accent-ink: #18388a;
+  --on-accent: #ffffff;
+  --focus: #1f45a8;
+  --danger: #b42318;
+  --overlay: rgb(20 19 17 / 0.94);
+  --overlay-hover: rgb(255 255 255 / 0.12);
+
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  --step-3: clamp(2.25rem, 1.6rem + 3vw, 4rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 5rem;
+
+  --radius: 4px;
+  --container: 72rem;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --tabbar-h: 3.5rem;
+  --tap: 2.75rem;
+}

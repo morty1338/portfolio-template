@@ -1,0 +1,54 @@
+---
+import ContactForm from '../../components/ContactForm.astro';
+import { site } from '../../config/site';
+import { getProjects } from '../../data/content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localeFromParam, localeStaticPaths } from '../../i18n/routing';
+import { useTranslations } from '../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = localeFromParam(Astro.params.lang);
+const t = useTranslations(locale);
+const projectTitles = Object.fromEntries((await getProjects()).map((p) => [p.id, p.data.title]));
+---
+
+<BaseLayout locale={locale} title={t('contact.title')} description={t('contact.description', { name: site.name })}>
+  <div class="container page">
+    <div class="side">
+      <h1>{t('contact.title')}</h1>
+      <p class="lead">{t('contact.intro')}</p>
+      <div class="email">
+        <p class="eyebrow">{t('contact.email')}</p>
+        <a href={`mailto:${site.email}`} data-track="contact-click" data-track-from="contact-email">
+          {site.email}
+        </a>
+      </div>
+    </div>
+    <ContactForm locale={locale} projectTitles={projectTitles} />
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: var(--space-6);
+    padding-top: var(--space-6);
+  }
+  .side {
+    display: grid;
+    gap: var(--space-4);
+    align-content: start;
+  }
+  .email a {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    overflow-wrap: anywhere;
+  }
+  @media (min-width: 960px) {
+    .page {
+      grid-template-columns: 2fr 3fr;
+      gap: var(--space-7);
+    }
+  }
+</style>

@@ -1,0 +1,228 @@
+---
+import { Picture } from 'astro:assets';
+import ExternalVideoLink from '../../../components/ExternalVideoLink.astro';
+import Gallery from '../../../components/Gallery.astro';
+import VideoFacade from '../../../components/VideoFacade.astro';
+import { getProjects, projectPath, type Project } from '../../../data/content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { langParam, localeFromParam, locales, localizePath } from '../../../i18n/routing';
+import { useTranslations } from '../../../i18n/ui';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return locales.flatMap((locale) =>
+    projects.map((project) => {
+      // Previous/next stay within the same category.
+      const siblings = projects.filter((p) => p.data.category === project.data.category);
+      const index = siblings.indexOf(project);
+      return {
+        params: { lang: langParam(locale), slug: project.id },
+        props: { project, prev: siblings[index - 1], next: siblings[index + 1] },
+      };
+    }),
+  );
+}
+
+interface Props {
+  project: Project;
+  prev?: Project;
+  next?: Project;
+}
+const { project, prev, next } = Astro.props;
+const { data } = project;
+const locale = localeFromParam(Astro.params.lang);
+const t = useTranslations(locale);
+const video = data.video;
+// Open Graph preview: the film still, or the first photo of a series; falls back to the portrait.
+const ogImage = data.thumbnail ?? data.photos[0]?.src;
+const contactHref = `${localizePath('/contact/', locale)}?from=${encodeURIComponent(project.id)}`;
+---
+
+<BaseLayout
+  locale={locale}
+  title={data.title}
+  description={data.description[locale]}
+  image={ogImage}
+  imageAlt={t('project.stillAlt', { title: data.title })}
+  ogType={video ? 'video.other' : 'article'}
+>
+  <article class="container page">
+    <a class="back" href={`${localizePath('/work/', locale)}#${data.category}`}>
+      ← {t('project.back')}
+    </a>
+
+    <header class="head">
+      <p class="eyebrow">{t(`category.${data.category}`)}</p>
+      <h1>{data.title}</h1>
+      <dl class="meta">
+        <div>
+          <dt class="eyebrow">{t('project.roles')}</dt>
+          <dd>
+            <ul class="chips">
+              {data.roles.map((role) => (
+                <li class="chip">{t(`role.${role}`)}</li>
+              ))}
+            </ul>
+          </dd>
+        </div>
+        {data.year && (
+          <div>
+            <dt class="eyebrow">{t('project.year')}</dt>
+            <dd class="mono">{data.year}</dd>
+          </div>
+        )}
+      </dl>
+    </header>
+
+    <div class="media">
+      {video?.embedUrl ? (
+        <VideoFacade
+          video={{ ...video, embedUrl: video.embedUrl }}
+          title={data.title}
+          projectId={project.id}
+          thumbnail={data.thumbnail}
+          locale={locale}
+        />
+      ) : video ? (
+        <ExternalVideoLink video={video} title={data.title} thumbnail={data.thumbnail} locale={locale} />
+      ) : (
+        // A photo series shows its gallery instead of a single cover.
+        data.thumbnail &&
+        data.photos.length === 0 && (
+          <Picture
+            class="cover"
+            src={data.thumbnail}
+            alt=""
+            widths={[640, 960, 1280]}
+            sizes="(min-width: 960px) 60rem, 100vw"
+            formats={['avif', 'webp']}
+            loading="eager"
+            fetchpriority="high"
+          />
+        )
+      )}
+    </div>
+
+    {data.note && <p class="note muted">{data.note[locale]}</p>}
+
+    <p class="lead description">{data.description[locale]}</p>
+
+    {data.photos.length > 0 && (
+      <section class="photos" aria-labelledby="photos-title">
+        <h2 id="photos-title" class="visually-hidden">
+          {t('project.photos')}
+        </h2>
+        <Gallery
+          items={data.photos.map((photo) => ({ src: photo.src, alt: photo.alt[locale] }))}
+          locale={locale}
+          label={data.title}
+        />
+      </section>
+    )}
+
+    <aside class="cta" aria-label={t('project.cta')}>
+      <p>{t('project.cta')}</p>
+      <a class="button button--primary" href={contactHref} data-track="contact-click" data-track-from={project.id}>
+        {t('project.cta.button')}
+      </a>
+    </aside>
+
+    {(prev || next) && (
+      <nav class="pager" aria-label={`${t('project.prev')} / ${t('project.next')}`}>
+        {prev && (
+          <a href={projectPath(prev.id, locale)} rel="prev">
+            <span class="eyebrow">← {t('project.prev')}</span>
+            <span>{prev.data.title}</span>
+          </a>
+        )}
+        {next && (
+          <a href={projectPath(next.id, locale)} rel="next" class="next">
+            <span class="eyebrow">{t('project.next')} →</span>
+            <span>{next.data.title}</span>
+          </a>
+        )}
+      </nav>
+    )}
+  </article>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: var(--space-5);
+    max-width: 60rem;
+    padding-top: var(--space-5);
+  }
+  .back {
+    justify-self: start;
+    padding-block: var(--space-2);
+  }
+  .head {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-6);
+  }
+  .meta > div {
+    display: grid;
+    gap: var(--space-2);
+  }
+  dd {
+    margin: 0;
+  }
+  .media :global(.cover) {
+    width: 100%;
+    border-radius: var(--radius);
+  }
+  .description {
+    max-width: 60ch;
+  }
+  .note {
+    margin-top: calc(-1 * var(--space-3));
+    font-size: var(--step--1);
+  }
+  .media:empty {
+    display: none;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--surface-2);
+    border-radius: var(--radius);
+  }
+  .cta p {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+  }
+  .pager {
+    display: grid;
+    gap: var(--space-4);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+  }
+  .pager a {
+    display: grid;
+    gap: var(--space-1);
+    text-decoration: none;
+  }
+  .pager a span:last-child {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+  }
+  @media (min-width: 600px) {
+    .pager {
+      grid-template-columns: 1fr 1fr;
+    }
+    .pager .next {
+      grid-column: 2;
+      text-align: right;
+    }
+  }
+</style>

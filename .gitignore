@@ -1,0 +1,21 @@
+# raw input (photos, texts) for content/: never committed, never served
+material/
+
+# build output and caches
+dist/
+.astro/
+.vercel/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+*.log

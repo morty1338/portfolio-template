@@ -1,0 +1,203 @@
+{
+  "seed": 7,
+  "images": [
+    {
+      "path": "profile/main/portrait.jpg",
+      "width": 1200,
+      "height": 1500,
+      "kind": "figure",
+      "palette": [
+        "#1f2933",
+        "#52606d",
+        "#0b1014"
+      ]
+    },
+    {
+      "path": "projects/low-tide/thumbnail.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "horizon",
+      "palette": [
+        "#16324f",
+        "#e0a96d",
+        "#f6e7cb"
+      ]
+    },
+    {
+      "path": "projects/paper-lanterns/thumbnail.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "horizon",
+      "palette": [
+        "#2b2d42",
+        "#8d5a97",
+        "#f2c57c"
+      ]
+    },
+    {
+      "path": "projects/city-in-reverse/thumbnail.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "horizon",
+      "palette": [
+        "#1b263b",
+        "#5c7aa3",
+        "#e0e1dd"
+      ]
+    },
+    {
+      "path": "projects/the-quiet-shift/thumbnail.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "horizon",
+      "palette": [
+        "#3d2c2e",
+        "#c97b4a",
+        "#f4d6a0"
+      ]
+    },
+    {
+      "path": "projects/night-swim/thumbnail.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "horizon",
+      "palette": [
+        "#0b132b",
+        "#3a506b",
+        "#d9e4f5"
+      ]
+    },
+    {
+      "path": "projects/short-form-series/thumbnail.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "blocks",
+      "palette": [
+        "#f1ece2",
+        "#d1495b",
+        "#2e4057"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/01.jpg",
+      "width": 1200,
+      "height": 1600,
+      "kind": "horizon",
+      "palette": [
+        "#16324f",
+        "#e0a96d",
+        "#f6e7cb"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/02.jpg",
+      "width": 1600,
+      "height": 1067,
+      "kind": "rings",
+      "palette": [
+        "#e9dcc9",
+        "#9c6644",
+        "#283618"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/03.jpg",
+      "width": 1600,
+      "height": 1067,
+      "kind": "horizon",
+      "palette": [
+        "#2b2d42",
+        "#8d5a97",
+        "#f2c57c"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/04.jpg",
+      "width": 1200,
+      "height": 1200,
+      "kind": "rings",
+      "palette": [
+        "#1b263b",
+        "#5c7aa3",
+        "#e0e1dd"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/05.jpg",
+      "width": 1600,
+      "height": 1067,
+      "kind": "horizon",
+      "palette": [
+        "#3d2c2e",
+        "#c97b4a",
+        "#f4d6a0"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/06.jpg",
+      "width": 1200,
+      "height": 1600,
+      "kind": "rings",
+      "palette": [
+        "#22223b",
+        "#4a4e69",
+        "#c9ada7"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/07.jpg",
+      "width": 1600,
+      "height": 900,
+      "kind": "horizon",
+      "palette": [
+        "#0b132b",
+        "#3a506b",
+        "#d9e4f5"
+      ]
+    },
+    {
+      "path": "projects/salt-and-light/photos/08.jpg",
+      "width": 1200,
+      "height": 1200,
+      "kind": "rings",
+      "palette": [
+        "#e9dcc9",
+        "#9c6644",
+        "#283618"
+      ]
+    },
+    {
+      "path": "paintings/blue-hour/painting.jpg",
+      "width": 1400,
+      "height": 1960,
+      "kind": "blocks",
+      "palette": [
+        "#22223b",
+        "#4a4e69",
+        "#c9ada7"
+      ]
+    },
+    {
+      "path": "paintings/harbour-study/painting.jpg",
+      "width": 1600,
+      "height": 1200,
+      "kind": "blocks",
+      "palette": [
+        "#e9dcc9",
+        "#9c6644",
+        "#283618"
+      ]
+    },
+    {
+      "path": "paintings/red-field/painting.jpg",
+      "width": 1500,
+      "height": 1500,
+      "kind": "blocks",
+      "palette": [
+        "#f8edeb",
+        "#d00000",
+        "#e85d04"
+      ]
+    }
+  ]
+}

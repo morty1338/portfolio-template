@@ -1,0 +1,60 @@
+---
+/**
+ * <head> metadata for every page: canonical, hreflang alternates, Open Graph / Twitter card,
+ * robots and optional JSON-LD. The Open Graph image is cropped to 1.91:1 (up to 1200×630) at build time.
+ */
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+import { isIndexable } from '../config/env';
+import { defaultLocale, site, type Locale } from '../config/site';
+import { locales, switchLocale } from '../i18n/routing';
+import { ogLocale } from '../i18n/ui';
+import { serializeJsonLd } from '../lib/structured-data';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description: string;
+  image: ImageMetadata;
+  imageAlt: string;
+  type: 'website' | 'profile' | 'video.other' | 'article';
+  noindex: boolean;
+  jsonLd?: unknown;
+}
+const { locale, title, description, image, imageAlt, type, noindex, jsonLd } = Astro.props;
+
+const absolute = (path: string) => new URL(path, site.url).href;
+const pathname = Astro.url.pathname;
+// Largest 1.91:1 crop that fits the source (Astro never upscales, and a clamped size would lose the crop).
+const OG_RATIO = 1200 / 630;
+const ogWidth = Math.min(1200, image.width, Math.floor(image.height * OG_RATIO));
+const ogHeight = Math.round(ogWidth / OG_RATIO);
+const og = await getImage({ src: image, width: ogWidth, height: ogHeight, fit: 'cover', format: 'jpg', quality: 80 });
+const robots = noindex || !isIndexable ? 'noindex, nofollow' : 'index, follow';
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<meta name="robots" content={robots} />
+<link rel="canonical" href={absolute(pathname)} />
+{!noindex && locales.map((l) => <link rel="alternate" hreflang={l} href={absolute(switchLocale(pathname, l))} />)}
+{!noindex && <link rel="alternate" hreflang="x-default" href={absolute(switchLocale(pathname, defaultLocale))} />}
+
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={site.name} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={absolute(pathname)} />
+<meta property="og:locale" content={ogLocale[locale]} />
+{locales
+  .filter((l) => l !== locale)
+  .map((l) => (
+    <meta property="og:locale:alternate" content={ogLocale[l]} />
+  ))}
+<meta property="og:image" content={absolute(og.src)} />
+<meta property="og:image:width" content={String(ogWidth)} />
+<meta property="og:image:height" content={String(ogHeight)} />
+<meta property="og:image:alt" content={imageAlt} />
+<meta name="twitter:card" content="summary_large_image" />
+
+{jsonLd !== undefined && <script type="application/ld+json" set:html={serializeJsonLd(jsonLd)} />}

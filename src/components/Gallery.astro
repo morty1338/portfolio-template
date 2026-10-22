@@ -1,0 +1,345 @@
+---
+/**
+ * Image grid with a lightbox. Rows keep each image's aspect ratio (justified layout via flex-grow).
+ * Without JavaScript every thumbnail links to the large image; with JS the links open a <dialog>
+ * viewer: arrow keys / buttons / swipe to navigate, Esc or backdrop click to close, focus returns
+ * to the thumbnail. Full screen on phones.
+ */
+import type { ImageMetadata } from 'astro';
+import { getImage, Picture } from 'astro:assets';
+import type { Locale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+
+export interface GalleryItem {
+  src: ImageMetadata;
+  alt: string;
+  caption?: string;
+}
+interface Props {
+  items: GalleryItem[];
+  locale: Locale;
+  /** Accessible name of the list, e.g. the series title. */
+  label: string;
+  /**
+   * `justified`: rows that keep each image's aspect ratio (photo series, no captions).
+   * `grid`: 2–3 equal columns with the whole image and a caption below (paintings).
+   */
+  layout?: 'justified' | 'grid';
+}
+const { items, locale, label, layout = 'justified' } = Astro.props;
+const t = useTranslations(locale);
+const LARGE_WIDTH = 1600;
+
+const prepared = await Promise.all(
+  items.map(async (item) => ({
+    ...item,
+    ratio: item.src.width / item.src.height,
+    large: await getImage({ src: item.src, width: Math.min(item.src.width, LARGE_WIDTH), format: 'webp' }),
+  })),
+);
+---
+
+<div class="gallery" data-gallery>
+  <ul class:list={['grid', `is-${layout}`]} aria-label={label}>
+    {prepared.map((item, i) => (
+      <li style={`--ratio: ${item.ratio.toFixed(4)}`}>
+        <a
+          href={item.large.src}
+          data-index={i}
+          data-width={item.large.attributes.width}
+          data-height={item.large.attributes.height}
+          data-alt={item.alt}
+          data-caption={item.caption}
+        >
+          <Picture
+            src={item.src}
+            alt={item.alt}
+            widths={[320, 480, 720]}
+            sizes="(min-width: 960px) 25vw, 50vw"
+            formats={['avif', 'webp']}
+            loading={i < 4 ? 'eager' : 'lazy'}
+          />
+          <span class="visually-hidden">({t('gallery.open', { index: i + 1, total: items.length })})</span>
+        </a>
+        {item.caption && <p class="caption">{item.caption}</p>}
+      </li>
+    ))}
+  </ul>
+
+  <dialog class="lightbox" aria-label={t('gallery.dialog')}>
+    <div class="stage">
+      <figure>
+        <img alt="" decoding="async" />
+        <figcaption></figcaption>
+      </figure>
+    </div>
+    <p class="position mono" aria-live="polite"></p>
+    <button type="button" class="close" data-action="close" aria-label={t('gallery.close')}>
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"></path>
+      </svg>
+    </button>
+    <button type="button" class="prev" data-action="prev" aria-label={t('gallery.prev')}>
+      <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+        <path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none"></path>
+      </svg>
+    </button>
+    <button type="button" class="next" data-action="next" aria-label={t('gallery.next')}>
+      <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+        <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none"></path>
+      </svg>
+    </button>
+  </dialog>
+</div>
+
+<script>
+  const SWIPE_PX = 50;
+
+  for (const gallery of document.querySelectorAll<HTMLElement>('[data-gallery]')) {
+    const links = [...gallery.querySelectorAll<HTMLAnchorElement>('a[data-index]')];
+    const dialog = gallery.querySelector<HTMLDialogElement>('dialog')!;
+    const img = dialog.querySelector('img')!;
+    const caption = dialog.querySelector('figcaption')!;
+    const position = dialog.querySelector<HTMLElement>('.position')!;
+    let current = 0;
+    let trigger: HTMLElement | null = null;
+    if (links.length < 2) dialog.querySelectorAll<HTMLElement>('.prev, .next').forEach((b) => (b.hidden = true));
+
+    const show = (index: number) => {
+      current = (index + links.length) % links.length;
+      const link = links[current]!;
+      const shown = current;
+      // Show the thumbnail the browser already has right away, then swap in the large image once loaded,
+      // so a slow connection never shows an empty black screen.
+      const thumb = link.querySelector('img')?.currentSrc;
+      img.src = thumb || link.href;
+      if (thumb) {
+        const large = new Image();
+        large.onload = () => {
+          if (current === shown && dialog.open) img.src = link.href;
+        };
+        large.src = link.href;
+      }
+      img.width = Number(link.dataset.width);
+      img.height = Number(link.dataset.height);
+      img.alt = link.dataset.alt ?? '';
+      caption.textContent = link.dataset.caption ?? '';
+      caption.hidden = !link.dataset.caption;
+      position.textContent = `${current + 1} / ${links.length}`;
+      // Warm the cache for the neighbour the visitor is most likely to open next.
+      new Image().src = links[(current + 1) % links.length]!.href;
+    };
+
+    links.forEach((link, index) =>
+      link.addEventListener('click', (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+        event.preventDefault();
+        trigger = link;
+        show(index);
+        dialog.showModal();
+      }),
+    );
+
+    dialog.addEventListener('click', (event) => {
+      const action = (event.target as Element).closest<HTMLElement>('[data-action]')?.dataset.action;
+      if (action === 'close' || event.target === dialog || event.target === dialog.querySelector('.stage')) {
+        dialog.close();
+      } else if (action === 'prev') show(current - 1);
+      else if (action === 'next') show(current + 1);
+    });
+
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') show(current - 1);
+      else if (event.key === 'ArrowRight') show(current + 1);
+    });
+
+    let startX: number | null = null;
+    dialog.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse') startX = event.clientX;
+    });
+    dialog.addEventListener('pointerup', (event) => {
+      if (startX === null) return;
+      const dx = event.clientX - startX;
+      startX = null;
+      if (Math.abs(dx) > SWIPE_PX) show(current + (dx < 0 ? 1 : -1));
+    });
+
+    dialog.addEventListener('close', () => {
+      img.removeAttribute('src');
+      trigger?.focus();
+    });
+  }
+</script>
+
+<style>
+  /* Justified rows: each item grows in proportion to its aspect ratio. */
+  /* --row is the base row height: smaller on phones so two landscape photos share a row. */
+  .grid {
+    --row: 5.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+  .grid::after {
+    content: '';
+    flex-grow: 1000;
+  }
+  .grid > li {
+    flex: var(--ratio) 1 calc(var(--ratio) * var(--row));
+    min-width: 0;
+  }
+  .grid a {
+    display: block;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .grid a:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .grid :global(img) {
+    width: 100%;
+    aspect-ratio: var(--ratio);
+    object-fit: cover;
+    background: var(--surface-2);
+    transition: opacity 0.15s ease;
+  }
+  .grid a:hover :global(img) {
+    opacity: 0.85;
+  }
+  .caption {
+    margin-top: var(--space-2);
+    font-size: var(--step--1);
+    color: var(--ink-2);
+  }
+  /* Captioned grid: equal columns, the whole artwork (no crop), caption below. */
+  .grid.is-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-3);
+    align-items: start;
+  }
+  .grid.is-grid::after {
+    content: none;
+  }
+  .grid.is-grid :global(img) {
+    object-fit: contain;
+  }
+  @media (min-width: 600px) {
+    .grid {
+      --row: 9rem;
+    }
+    .grid.is-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 960px) {
+    .grid {
+      --row: 14rem;
+      gap: var(--space-3);
+    }
+  }
+
+  /* Lightbox: full screen on every device. */
+  .lightbox {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--overlay);
+    color: var(--bg);
+    touch-action: pan-y;
+  }
+  .lightbox::backdrop {
+    background: var(--overlay);
+  }
+  :global(html:has(dialog[open])) {
+    overflow: hidden;
+  }
+  .stage {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    padding: 3.5rem var(--space-2) 4.5rem;
+  }
+  figure {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: center;
+    max-height: 100%;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: calc(100dvh - 9rem);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  figcaption {
+    font-size: var(--step--1);
+    text-align: center;
+  }
+  .position {
+    position: absolute;
+    top: var(--space-4);
+    left: var(--space-4);
+  }
+  .lightbox button[hidden] {
+    display: none;
+  }
+  .lightbox button {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: var(--tap);
+    height: var(--tap);
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--bg);
+    cursor: pointer;
+  }
+  .lightbox button:hover {
+    background: var(--overlay-hover);
+  }
+  .lightbox button:focus-visible {
+    outline: 3px solid var(--bg);
+    outline-offset: 2px;
+  }
+  .close {
+    top: var(--space-2);
+    right: var(--space-2);
+  }
+  .prev,
+  .next {
+    bottom: var(--space-4);
+  }
+  .prev {
+    left: calc(50% - 3.5rem);
+  }
+  .next {
+    right: calc(50% - 3.5rem);
+  }
+  @media (min-width: 960px) {
+    .stage {
+      padding: 3.5rem 5rem;
+    }
+    .prev,
+    .next {
+      top: 50%;
+      bottom: auto;
+      margin-top: calc(var(--tap) / -2);
+    }
+    .prev {
+      left: var(--space-4);
+    }
+    .next {
+      right: var(--space-4);
+    }
+  }
+</style>

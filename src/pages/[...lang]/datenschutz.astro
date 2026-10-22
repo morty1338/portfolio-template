@@ -1,0 +1,9 @@
+---
+import LegalStub from '../../components/LegalStub.astro';
+import { localeFromParam, localeStaticPaths } from '../../i18n/routing';
+
+export const getStaticPaths = localeStaticPaths;
+const locale = localeFromParam(Astro.params.lang);
+---
+
+<LegalStub locale={locale} titleKey="footer.privacy" />

@@ -1,0 +1,146 @@
+---
+import { Picture } from 'astro:assets';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { site } from '../../config/site';
+import { getFeaturedProjects, getProfile } from '../../data/content';
+import { getPersonJsonLd } from '../../data/person';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localeFromParam, localeStaticPaths, localizePath } from '../../i18n/routing';
+import { useTranslations } from '../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = localeFromParam(Astro.params.lang);
+const t = useTranslations(locale);
+const profile = await getProfile();
+const jsonLd = await getPersonJsonLd(locale);
+const featured = await getFeaturedProjects();
+---
+
+<BaseLayout locale={locale} description={profile.tagline[locale]} jsonLd={jsonLd}>
+  <section class="hero container">
+    <div class="intro">
+      <p class="eyebrow">
+        {profile.jobTitle[locale]} · {site.city}
+      </p>
+      <h1>{site.name}</h1>
+      <p class="lead">{profile.tagline[locale]}</p>
+      <div class="actions">
+        <a class="button button--primary" href={localizePath('/work/', locale)}>
+          {t('home.cta.work')}
+        </a>
+        <a class="button" href={localizePath('/contact/', locale)} data-track="contact-click" data-track-from="home">
+          {t('home.cta.contact')}
+        </a>
+      </div>
+    </div>
+    <Picture
+      class="portrait"
+      src={profile.portrait}
+      alt={profile.portraitAlt[locale]}
+      widths={[360, 640, 960]}
+      sizes="(min-width: 960px) 40vw, (min-width: 600px) 45vw, 100vw"
+      formats={['avif', 'webp']}
+      loading="eager"
+      fetchpriority="high"
+    />
+  </section>
+
+  <section class="container open-to" aria-labelledby="open-to">
+    <h2 id="open-to" class="eyebrow">
+      {t('home.openTo')}
+    </h2>
+    <ul class="chips">
+      {profile.lookingFor.map((role) => (
+        <li class="chip">{role[locale]}</li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="container section" aria-labelledby="featured">
+    <div class="section-head">
+      <h2 id="featured">{t('home.featured')}</h2>
+      <a href={localizePath('/work/', locale)}>{t('home.allWork')} →</a>
+    </div>
+    <ul class="grid">
+      {featured.map((project) => (
+        <li>
+          <ProjectCard project={project} locale={locale} />
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    display: grid;
+    gap: var(--space-6);
+    padding-block: var(--space-6) var(--space-5);
+  }
+  .intro {
+    display: grid;
+    gap: var(--space-4);
+    align-content: center;
+  }
+  /* Phones: a landscape crop keeps the selected films close to the first screen. */
+  .hero :global(.portrait) {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    object-position: 50% 30%;
+    border-radius: var(--radius);
+  }
+  .open-to {
+    display: grid;
+    gap: var(--space-3);
+    padding-block: var(--space-4);
+  }
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .grid {
+    display: grid;
+    gap: var(--space-5);
+    padding: 0;
+    list-style: none;
+  }
+  .grid > li {
+    display: grid;
+  }
+  @media (min-width: 600px) {
+    .hero {
+      grid-template-columns: 1fr 1fr;
+      padding-block: var(--space-7);
+    }
+    .hero :global(.portrait) {
+      aspect-ratio: 4 / 5;
+      max-height: 70vh;
+    }
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 960px) {
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  /* Low desktop screens (e.g. 1280×720): keep the selected films in reach of the first screen. */
+  @media (min-width: 600px) and (max-height: 820px) {
+    .hero {
+      padding-block: var(--space-5) var(--space-3);
+    }
+    .hero :global(.portrait) {
+      max-height: 52vh;
+    }
+    .section {
+      padding-top: var(--space-5);
+    }
+  }
+</style>

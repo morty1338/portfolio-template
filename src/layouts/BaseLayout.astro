@@ -1,0 +1,88 @@
+---
+import type { ImageMetadata } from 'astro';
+import '../styles/global.css';
+import Seo from '../components/Seo.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import TabBar from '../components/TabBar.astro';
+import { site, type Locale } from '../config/site';
+import { getProfile } from '../data/content';
+import { htmlLang, useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+  /** Page title without the site name; omit on the homepage. */
+  title?: string;
+  description: string;
+  /** Keep the page out of search results (e.g. unfinished legal pages, 404). */
+  noindex?: boolean;
+  /** Open Graph image (cropped to 1200×630); defaults to the portrait. */
+  image?: ImageMetadata;
+  imageAlt?: string;
+  ogType?: 'website' | 'profile' | 'video.other' | 'article';
+  jsonLd?: unknown;
+}
+const { locale, title, description, noindex = false, image, imageAlt, ogType = 'website', jsonLd } = Astro.props;
+const t = useTranslations(locale);
+const profile = await getProfile();
+const fullTitle = title ? `${title} · ${site.name}` : `${site.name} · ${profile.jobTitle[locale]}, ${site.city}`;
+---
+
+<!doctype html>
+<html lang={htmlLang[locale]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <Seo
+      locale={locale}
+      title={fullTitle}
+      description={description}
+      image={image ?? profile.portrait}
+      imageAlt={image ? (imageAlt ?? '') : profile.portraitAlt[locale]}
+      type={ogType}
+      noindex={noindex}
+      jsonLd={jsonLd}
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      {t('skip.link')}
+    </a>
+    <SiteHeader locale={locale} />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <SiteFooter locale={locale} />
+    <TabBar locale={locale} />
+  </body>
+</html>
+
+<style>
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -10rem;
+    z-index: 20;
+    padding: var(--space-3) var(--space-4);
+    background: var(--ink-1);
+    color: var(--bg);
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+  main:focus {
+    outline: none;
+  }
+  /* Room for the fixed tab bar on phones. */
+  body {
+    padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 600px) {
+    body {
+      padding-bottom: 0;
+    }
+  }
+</style>

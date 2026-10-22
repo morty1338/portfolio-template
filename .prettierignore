@@ -1,0 +1,8 @@
+dist/
+.astro/
+material/
+node_modules/
+package-lock.json
+content*/**/*.json
+docs/PLAYBOOK.md
+.claude/

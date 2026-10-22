@@ -1,0 +1,39 @@
+---
+/* One 404 page for every locale: hosts serve dist/404.html for any unknown path. */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { defaultLocale, site } from '../config/site';
+import { localizePath } from '../i18n/routing';
+import { htmlLang, useTranslations } from '../i18n/ui';
+---
+
+<BaseLayout locale={defaultLocale} title={useTranslations(defaultLocale)('notFound.title')} description="404" noindex>
+  <div class="container page">
+    {site.locales.map((locale, i) => {
+      const t = useTranslations(locale);
+      // One <h1> per page: the default language's heading; the others are <h2>.
+      const Heading = i === 0 ? 'h1' : 'h2';
+      return (
+        <section lang={htmlLang[locale]}>
+          <Heading>{t('notFound.title')}</Heading>
+          <p>{t('notFound.body')}</p>
+          <a class="button" href={localizePath('/', locale)}>
+            {t('notFound.home')}
+          </a>
+        </section>
+      );
+    })}
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: var(--space-6);
+    padding-top: var(--space-7);
+  }
+  section {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+  }
+</style>

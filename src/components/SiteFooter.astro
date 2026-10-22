@@ -1,0 +1,84 @@
+---
+import { site, type Locale } from '../config/site';
+import { localizePath } from '../i18n/routing';
+import { useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<footer class="footer">
+  <div class="container grid">
+    <div>
+      <p class="name">{site.name}</p>
+      <a href={`mailto:${site.email}`} data-track="contact-click" data-track-from="footer">
+        {site.email}
+      </a>
+    </div>
+    {site.socials.length > 0 && (
+      <ul class="list">
+        {site.socials.map((s) => (
+          <li>
+            <a href={s.url} rel="me noopener" target="_blank">
+              {s.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+    <nav aria-label={t('footer.legal')}>
+      <ul class="list">
+        <li>
+          <a href={localizePath('/impressum/', locale)}>{t('footer.impressum')}</a>
+        </li>
+        <li>
+          <a href={localizePath('/datenschutz/', locale)}>{t('footer.privacy')}</a>
+        </li>
+      </ul>
+    </nav>
+    <p class="muted mono">
+      © {new Date().getFullYear()} {site.name}
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-top: var(--space-8);
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--line);
+    font-size: var(--step--1);
+  }
+  .grid {
+    display: grid;
+    gap: var(--space-5);
+  }
+  .name {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+  }
+  .list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    padding: 0;
+    list-style: none;
+  }
+  .list a,
+  .grid > div > a {
+    display: inline-block;
+    padding-block: var(--space-2);
+  }
+  @media (min-width: 600px) {
+    .grid {
+      grid-template-columns: 1fr auto auto;
+      align-items: end;
+    }
+    .grid > p {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

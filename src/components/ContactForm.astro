@@ -1,0 +1,273 @@
+---
+/**
+ * Contact form. Validation uses src/lib/contact.ts, the same rules the server endpoint applies (Phase 2).
+ * - Inline errors under each field (aria-invalid + aria-describedby); focus moves to the first invalid field.
+ * - Honeypot field hidden from people and screen readers; bots that fill it are dropped silently.
+ * - `source` = the project the visitor came from (?from=<slug>), so the lead list knows which work they saw.
+ * Without JavaScript the form posts normally to the same endpoint.
+ */
+import { defaultLocale, site, type Locale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+import { CONTACT_LIMITS, HONEYPOT_FIELD } from '../lib/contact';
+
+interface Props {
+  locale: Locale;
+  /** slug → title, to show "Regarding: <title>" for ?from=<slug> */
+  projectTitles: Record<string, string>;
+}
+const { locale, projectTitles } = Astro.props;
+const t = useTranslations(locale);
+const messages = {
+  required: t('contact.error.required'),
+  invalid: t('contact.error.invalid'),
+  tooLong: t('contact.error.tooLong'),
+  sending: t('contact.sending'),
+  success: t('contact.success'),
+  error: t('contact.error', { email: site.email }),
+  regarding: t('contact.regarding'),
+};
+---
+
+<form
+  class="form"
+  action={site.contactEndpoint}
+  method="post"
+  novalidate
+  data-contact-form
+  data-locale={locale}
+  data-locales={site.locales.join(',')}
+  data-default-locale={defaultLocale}
+  data-messages={JSON.stringify(messages)}
+  data-projects={JSON.stringify(projectTitles)}
+  aria-labelledby="contact-form-title"
+>
+  <h2 id="contact-form-title">{t('contact.form')}</h2>
+  <p class="regarding" data-regarding hidden></p>
+
+  <div class="field">
+    <label for="cf-name">
+      {t('contact.name')} <span class="req">({t('contact.required')})</span>
+    </label>
+    <input
+      id="cf-name"
+      name="name"
+      type="text"
+      autocomplete="name"
+      required
+      maxlength={CONTACT_LIMITS.name}
+      aria-describedby="cf-name-error"
+    />
+    <p class="error" id="cf-name-error"></p>
+  </div>
+
+  <div class="field">
+    <label for="cf-email">
+      {t('contact.yourEmail')} <span class="req">({t('contact.required')})</span>
+    </label>
+    <input
+      id="cf-email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      inputmode="email"
+      required
+      maxlength={CONTACT_LIMITS.email}
+      aria-describedby="cf-email-error"
+    />
+    <p class="error" id="cf-email-error"></p>
+  </div>
+
+  <div class="field">
+    <label for="cf-company">{t('contact.company')}</label>
+    <input
+      id="cf-company"
+      name="company"
+      type="text"
+      autocomplete="organization"
+      maxlength={CONTACT_LIMITS.company}
+      aria-describedby="cf-company-error"
+    />
+    <p class="error" id="cf-company-error"></p>
+  </div>
+
+  <div class="field">
+    <label for="cf-message">
+      {t('contact.message')} <span class="req">({t('contact.required')})</span>
+    </label>
+    <textarea
+      id="cf-message"
+      name="message"
+      rows="6"
+      required
+      maxlength={CONTACT_LIMITS.message}
+      aria-describedby="cf-message-error"
+    ></textarea>
+    <p class="error" id="cf-message-error"></p>
+  </div>
+
+  <!-- Honeypot: off-screen, not focusable, ignored by screen readers. -->
+  <div class="hp" aria-hidden="true">
+    <label for="cf-hp">{t('contact.honeypot')}</label>
+    <input id="cf-hp" name={HONEYPOT_FIELD} type="text" tabindex="-1" autocomplete="off" />
+  </div>
+  <input type="hidden" name="source" value="" />
+  <input type="hidden" name="locale" value={locale} />
+
+  <p class="muted note">{t('contact.privacy')}</p>
+  <button class="button button--primary" type="submit" data-track="contact-submit">
+    {t('contact.send')}
+  </button>
+  <p class="status" role="status" data-status></p>
+</form>
+
+<script>
+  import { validateContact, CONTACT_LIMITS, type ContactField } from '../lib/contact';
+
+  for (const form of document.querySelectorAll<HTMLFormElement>('[data-contact-form]')) {
+    const messages = JSON.parse(form.dataset.messages!) as Record<string, string>;
+    const projects = JSON.parse(form.dataset.projects!) as Record<string, string>;
+    const locales = form.dataset.locales!.split(',');
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    const fields: ContactField[] = ['name', 'email', 'company', 'message'];
+
+    // Which work did the visitor come from? Only known slugs are accepted.
+    const from = new URLSearchParams(location.search).get('from') ?? '';
+    if (projects[from]) {
+      form.querySelector<HTMLInputElement>('input[name="source"]')!.value = from;
+      const regarding = form.querySelector<HTMLElement>('[data-regarding]')!;
+      regarding.textContent = messages.regarding!.replace('{title}', projects[from]!);
+      regarding.hidden = false;
+    }
+
+    const showErrors = (errors: Partial<Record<ContactField, string>>) => {
+      for (const field of fields) {
+        const input = form.elements.namedItem(field) as HTMLInputElement;
+        const error = errors[field];
+        const text = error ? messages[error]!.replace('{max}', String(CONTACT_LIMITS[field])) : '';
+        form.querySelector(`#cf-${field}-error`)!.textContent = text;
+        if (error) input.setAttribute('aria-invalid', 'true');
+        else input.removeAttribute('aria-invalid');
+      }
+    };
+
+    // Clear a field's error as soon as the visitor edits it.
+    form.addEventListener('input', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (input.getAttribute('aria-invalid')) {
+        input.removeAttribute('aria-invalid');
+        form.querySelector(`#cf-${input.name}-error`)!.textContent = '';
+      }
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(form));
+      const result = validateContact(values, locales, form.dataset.defaultLocale!);
+      if (!result.ok && !result.spam) {
+        showErrors(result.errors);
+        form.querySelector<HTMLElement>(`#cf-${Object.keys(result.errors)[0]}`)?.focus();
+        return;
+      }
+      showErrors({});
+      button.disabled = true;
+      status.textContent = messages.sending!;
+      try {
+        // A bot that filled the honeypot gets the same "success" a person would, but nothing is sent.
+        if (result.ok) {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...result.data, website: '' }),
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        }
+        form.reset();
+        status.textContent = messages.success!;
+        document.dispatchEvent(new CustomEvent('portfolio:track', { detail: { name: 'contact-sent' } }));
+      } catch {
+        status.textContent = messages.error!;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+</script>
+
+<style>
+  .form {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .regarding {
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-2);
+    border-radius: var(--radius);
+    font-size: var(--step--1);
+  }
+  .field {
+    display: grid;
+    gap: var(--space-1);
+  }
+  label {
+    font-weight: 500;
+  }
+  .req {
+    font-weight: 400;
+    font-size: var(--step--1);
+    color: var(--ink-3);
+  }
+  /* ≥ 16px so iOS doesn't zoom in; ink-3 border keeps ≥ 3:1 contrast for the field outline (WCAG 1.4.11). */
+  input,
+  textarea {
+    width: 100%;
+    min-height: var(--tap);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+    font-size: max(16px, 1rem);
+  }
+  textarea {
+    resize: vertical;
+  }
+  [aria-invalid='true'] {
+    border-color: var(--danger);
+    border-width: 2px;
+  }
+  .error {
+    min-height: 0;
+    color: var(--danger);
+    font-size: var(--step--1);
+  }
+  .error:empty {
+    display: none;
+  }
+  .hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .note {
+    font-size: var(--step--1);
+  }
+  button {
+    justify-self: start;
+  }
+  button:disabled {
+    opacity: 0.7;
+    cursor: progress;
+  }
+  .status:empty {
+    display: none;
+  }
+  .status {
+    font-weight: 500;
+  }
+</style>

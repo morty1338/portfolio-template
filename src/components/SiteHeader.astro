@@ -1,0 +1,84 @@
+---
+import { site, type Locale } from '../config/site';
+import { isCurrentSection, navigation } from '../config/navigation';
+import { localizePath, splitLocale } from '../i18n/routing';
+import { useTranslations } from '../i18n/ui';
+import LanguageSwitch from './LanguageSwitch.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const current = splitLocale(Astro.url.pathname).path;
+---
+
+<header class="header">
+  <div class="container bar">
+    <a class="name" href={localizePath('/', locale)}>
+      {site.name}
+    </a>
+    <nav class="nav" aria-label={t('nav.label')}>
+      <ul>
+        {navigation
+          .filter((item) => !item.home)
+          .map((item) => (
+            <li>
+              <a
+                href={localizePath(item.path, locale)}
+                class:list={[item.cta ? 'button button--primary' : 'link']}
+                aria-current={isCurrentSection(current, item.path) ? 'page' : undefined}
+                data-track={item.cta ? 'contact-click' : undefined}
+                data-track-from={item.cta ? 'header' : undefined}
+              >
+                {t(item.key)}
+              </a>
+            </li>
+          ))}
+      </ul>
+    </nav>
+    <LanguageSwitch locale={locale} />
+  </div>
+</header>
+
+<style>
+  .header {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    min-height: 4rem;
+  }
+  .name {
+    margin-right: auto;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    text-decoration: none;
+  }
+  .nav {
+    display: none;
+  }
+  .nav ul {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: 0;
+    list-style: none;
+  }
+  .link {
+    text-decoration: none;
+  }
+  .link[aria-current='page'] {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+  /* Phones use the bottom tab bar instead (TabBar.astro). */
+  @media (min-width: 600px) {
+    .nav {
+      display: block;
+    }
+  }
+</style>

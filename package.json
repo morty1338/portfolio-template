@@ -1,0 +1,33 @@
+{
+  "name": "portfolio",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build && node scripts/check-dist.mjs",
+    "preview": "node scripts/serve.mjs",
+    "check": "astro check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "images:extract": "node scripts/extract-photos.mjs",
+    "images:youtube": "node scripts/fetch-youtube-thumbnails.mjs",
+    "check:dist": "node scripts/check-dist.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.4.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "prettier": "^3.9.10",
+    "prettier-plugin-astro": "^1.1.1",
+    "sharp": "^0.35.5",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

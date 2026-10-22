@@ -1,0 +1,58 @@
+---
+import { site, type Locale } from '../config/site';
+import { switchLocale } from '../i18n/routing';
+import { useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<nav class="lang" aria-label={t('lang.label')}>
+  <ul>
+    {site.locales.map((l) => (
+      <li>
+        <a
+          href={switchLocale(Astro.url.pathname, l)}
+          hreflang={l}
+          lang={l}
+          aria-current={l === locale ? 'true' : undefined}
+          data-track="language-switch"
+          data-track-to={l}
+        >
+          {/* Accessible name "EN (English)" contains the visible "EN" (WCAG 2.5.3 Label in Name). */}
+          {l.toUpperCase()}
+          <span class="visually-hidden"> ({t(`lang.${l}`)})</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  ul {
+    display: flex;
+    gap: var(--space-1);
+    padding: 0;
+    list-style: none;
+  }
+  a {
+    display: grid;
+    place-items: center;
+    min-width: var(--tap);
+    min-height: var(--tap);
+    font-family: var(--mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    color: var(--ink-3);
+    border-radius: var(--radius);
+  }
+  a[aria-current] {
+    color: var(--ink-1);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+</style>

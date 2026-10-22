@@ -1,0 +1,160 @@
+---
+import { Picture } from 'astro:assets';
+import { site } from '../../config/site';
+import { getProfile } from '../../data/content';
+import { getPersonJsonLd } from '../../data/person';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { localeFromParam, localeStaticPaths, localizePath } from '../../i18n/routing';
+import { useTranslations } from '../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = localeFromParam(Astro.params.lang);
+const t = useTranslations(locale);
+const profile = await getProfile();
+const jsonLd = await getPersonJsonLd(locale);
+---
+
+<BaseLayout
+  locale={locale}
+  title={t('about.title')}
+  description={profile.tagline[locale]}
+  ogType="profile"
+  jsonLd={jsonLd}
+>
+  <div class="container page">
+    <div class="intro">
+      <div class="text">
+        <h1>{t('about.title')}</h1>
+        {profile.about.map((paragraph, i) => (
+          <p class:list={{ lead: i === 0 }}>{paragraph[locale]}</p>
+        ))}
+      </div>
+      <Picture
+        class="portrait"
+        src={profile.portrait}
+        alt={profile.portraitAlt[locale]}
+        widths={[360, 640, 960]}
+        sizes="(min-width: 600px) 35vw, 100vw"
+        formats={['avif', 'webp']}
+        loading="eager"
+      />
+    </div>
+
+    <!-- Employers scan for these first, so they come before the skills. -->
+    <section class="looking" aria-labelledby="looking-title">
+      <h2 id="looking-title">{t('about.lookingFor')}</h2>
+      <ul class="roles">
+        {profile.lookingFor.map((role) => (
+          <li>{role[locale]}</li>
+        ))}
+      </ul>
+      <p class="muted">… {t('about.lookingFor.more')}</p>
+    </section>
+
+    <section aria-labelledby="skills-title">
+      <h2 id="skills-title">{t('about.skills')}</h2>
+      <div class="skills">
+        {profile.skills.map((group) => (
+          <div>
+            <h3 class="eyebrow">{group.group[locale]}</h3>
+            <ul class="chips">
+              {group.items.map((item) => (
+                <li class="chip">{item[locale]}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <div class="actions">
+      <a
+        class="button button--primary"
+        href={localizePath('/contact/', locale)}
+        data-track="contact-click"
+        data-track-from="about"
+      >
+        {t('about.cta')}
+      </a>
+      {site.cvPath && (
+        <a class="button" href={site.cvPath} download data-track="cv-download">
+          {t('about.cv')}
+        </a>
+      )}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: var(--space-7);
+    padding-top: var(--space-6);
+  }
+  .intro {
+    display: grid;
+    gap: var(--space-5);
+  }
+  .text {
+    display: grid;
+    gap: var(--space-4);
+    align-content: start;
+    max-width: 60ch;
+  }
+  /* Phones: landscape crop, so the roles she's looking for stay close to the top (as on Home). */
+  .intro :global(.portrait) {
+    width: 100%;
+    max-width: 28rem;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    object-position: 50% 30%;
+    border-radius: var(--radius);
+  }
+  .looking {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .roles {
+    display: grid;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+  }
+  .skills {
+    display: grid;
+    gap: var(--space-5);
+    margin-top: var(--space-4);
+  }
+  .skills > div {
+    display: grid;
+    gap: var(--space-2);
+  }
+  @media (min-width: 600px) {
+    .intro {
+      grid-template-columns: 3fr 2fr;
+      align-items: start;
+    }
+    .intro :global(.portrait) {
+      aspect-ratio: 4 / 5;
+    }
+    .roles {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 960px) {
+    .skills {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .roles {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

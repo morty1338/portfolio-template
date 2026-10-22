@@ -1,0 +1,106 @@
+---
+import { Picture } from 'astro:assets';
+import type { Locale } from '../config/site';
+import { projectPath, type Project } from '../data/content';
+import { useTranslations } from '../i18n/ui';
+import { filtersFor } from '../lib/roles';
+
+interface Props {
+  project: Project;
+  locale: Locale;
+  headingLevel?: 'h2' | 'h3';
+  /** true for cards visible on first paint (no lazy loading). */
+  eager?: boolean;
+}
+const { project, locale, headingLevel: Heading = 'h3', eager = false } = Astro.props;
+const { data } = project;
+const t = useTranslations(locale);
+const credits = data.roles.map((r) => t(`role.${r}`)).join(' · ');
+---
+
+<article class="card" data-filters={filtersFor(data.roles).join(' ')}>
+  <div class="media">
+    {data.thumbnail ? (
+      <Picture
+        src={data.thumbnail}
+        alt=""
+        widths={[360, 640, 960]}
+        sizes="(min-width: 960px) 30vw, (min-width: 600px) 45vw, 100vw"
+        formats={['avif', 'webp']}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : undefined}
+      />
+    ) : (
+      <div class="placeholder" aria-hidden="true">
+        {data.title}
+      </div>
+    )}
+  </div>
+  <div class="body">
+    <Heading class="title">
+      <a href={projectPath(project.id, locale)} data-track="project-open" data-track-project={project.id}>
+        {data.title}
+      </a>
+    </Heading>
+    <p class="credits mono">{data.year ? `${credits} · ${data.year}` : credits}</p>
+    <p class="description">{data.description[locale]}</p>
+  </div>
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .media :global(img),
+  .placeholder {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--surface-2);
+  }
+  .placeholder {
+    display: grid;
+    place-items: center;
+    padding: var(--space-4);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    text-align: center;
+    color: var(--ink-2);
+  }
+  .body {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-4);
+  }
+  .title a {
+    text-decoration: none;
+  }
+  /* The whole card is clickable, but only the title is the link (one tab stop, a clear name). */
+  .title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .card:hover .title a {
+    color: var(--accent);
+  }
+  .card:has(:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .title a:focus-visible {
+    outline: none;
+  }
+  .credits {
+    color: var(--ink-3);
+  }
+  .description {
+    color: var(--ink-2);
+  }
+</style>

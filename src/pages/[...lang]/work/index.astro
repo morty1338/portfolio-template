@@ -1,0 +1,148 @@
+---
+import ProjectCard from '../../../components/ProjectCard.astro';
+import Gallery from '../../../components/Gallery.astro';
+import RoleFilter from '../../../components/RoleFilter.astro';
+import { site } from '../../../config/site';
+import { getPaintings, getProjects, type Category } from '../../../data/content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { localeFromParam, localeStaticPaths } from '../../../i18n/routing';
+import { useTranslations } from '../../../i18n/ui';
+
+export const getStaticPaths = localeStaticPaths;
+
+const locale = localeFromParam(Astro.params.lang);
+const t = useTranslations(locale);
+
+const categories: Category[] = ['cinematography', 'solo', 'photography'];
+const sections = (await Promise.all(categories.map(async (id) => ({ id, projects: await getProjects(id) })))).filter(
+  (s) => s.projects.length > 0,
+);
+const paintings = await getPaintings();
+const paintingCaption = ({ data }: (typeof paintings)[number]) =>
+  [data.title, data.year, data.medium[locale], data.size].filter(Boolean).join(' · ');
+---
+
+<BaseLayout locale={locale} title={t('work.title')} description={t('work.description', { name: site.name })}>
+  <div class="container page">
+    <h1>{t('work.title')}</h1>
+    <nav aria-label={t('work.sections')}>
+      <ul class="chips">
+        {sections.map((s) => (
+          <li>
+            <a class="chip" href={`#${s.id}`}>
+              {t(`category.${s.id}`)}
+            </a>
+          </li>
+        ))}
+        <li>
+          <a class="chip" href="#paintings">
+            {t('category.painting')}
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    {sections.map(({ id, projects }) => (
+      <section id={id} class="section" aria-labelledby={`${id}-title`}>
+        <h2 id={`${id}-title`}>{t(`category.${id}`)}</h2>
+        <p class="intro muted">{t(`category.${id}.intro`)}</p>
+        {id === 'cinematography' && <RoleFilter locale={locale} listId={`${id}-list`} total={projects.length} />}
+        <ul class="grid" id={`${id}-list`}>
+          {projects.map((project) => (
+            <li>
+              <ProjectCard project={project} locale={locale} />
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <section id="paintings" class="section" aria-labelledby="paintings-title">
+      <h2 id="paintings-title">{t('category.painting')}</h2>
+      {paintings.length > 0 ? (
+        <>
+          <p class="intro muted">{t('category.painting.intro')}</p>
+          <Gallery
+            items={paintings.map((p) => ({ src: p.data.image, alt: p.data.alt[locale], caption: paintingCaption(p) }))}
+            locale={locale}
+            label={t('category.painting')}
+            layout="grid"
+          />
+        </>
+      ) : (
+        <div class="empty">
+          <svg class="empty-icon" viewBox="0 0 24 24" width="32" height="32" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M3 15l5-5 4 4 3-3 6 6" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M8 21h8" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+          <p class="empty-title">{t('painting.empty.title')}</p>
+          <p class="muted">{t('painting.empty.body')}</p>
+          <a href="#photography">{t('painting.empty.action')} →</a>
+        </div>
+      )}
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    padding-top: var(--space-6);
+  }
+  nav {
+    margin-top: var(--space-4);
+  }
+  .chips a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    text-decoration: none;
+  }
+  section {
+    scroll-margin-top: var(--space-4);
+  }
+  .intro {
+    margin: var(--space-2) 0 var(--space-5);
+  }
+  .empty {
+    display: grid;
+    gap: var(--space-2);
+    justify-items: start;
+    margin-top: var(--space-4);
+    padding: var(--space-6) var(--space-5);
+    border: 1px dashed var(--ink-3);
+    border-radius: var(--radius);
+  }
+  .empty-icon {
+    color: var(--ink-3);
+  }
+  .empty a {
+    padding-block: var(--space-2);
+  }
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+  }
+  .grid {
+    display: grid;
+    gap: var(--space-5);
+    padding: 0;
+    list-style: none;
+  }
+  .grid > li {
+    display: grid;
+  }
+  .grid > li[hidden] {
+    display: none;
+  }
+  @media (min-width: 600px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 960px) {
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

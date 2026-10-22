@@ -1,0 +1,106 @@
+---
+/**
+ * Role filter for a list of ProjectCards (matches their `data-filters`).
+ * Progressive enhancement: hidden without JavaScript, where all projects simply stay visible.
+ * The active filter is kept in ?role= so a filtered list can be shared.
+ */
+import type { Locale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+import { ROLE_FILTERS } from '../lib/roles';
+
+interface Props {
+  locale: Locale;
+  /** id of the list element whose <li> items get filtered */
+  listId: string;
+  total: number;
+}
+const { locale, listId, total } = Astro.props;
+const t = useTranslations(locale);
+const labelId = `${listId}-filter-label`;
+const filters = Object.keys(ROLE_FILTERS) as (keyof typeof ROLE_FILTERS)[];
+---
+
+<div class="filter" data-role-filter data-list={listId} data-count-template={t('filter.count')} hidden>
+  <p id={labelId} class="eyebrow">
+    {t('filter.label')}
+  </p>
+  <div class="buttons" role="group" aria-labelledby={labelId}>
+    <button type="button" data-filter="" aria-pressed="true">
+      {t('filter.all')}
+    </button>
+    {filters.map((key) => (
+      <button type="button" data-filter={key} aria-pressed="false">
+        {t(`role.${key}`)}
+      </button>
+    ))}
+  </div>
+  <p class="count muted" role="status">
+    {t('filter.count', { count: total, total })}
+  </p>
+</div>
+
+<script>
+  for (const filter of document.querySelectorAll<HTMLElement>('[data-role-filter]')) {
+    const list = document.getElementById(filter.dataset.list!);
+    if (!list) continue;
+    const items = [...list.querySelectorAll<HTMLElement>(':scope > li')];
+    const buttons = [...filter.querySelectorAll<HTMLButtonElement>('button[data-filter]')];
+    const count = filter.querySelector<HTMLElement>('[role="status"]')!;
+    const template = filter.dataset.countTemplate!;
+    const valid = new Set(buttons.map((b) => b.dataset.filter));
+
+    const apply = (role: string, updateUrl: boolean) => {
+      let shown = 0;
+      for (const item of items) {
+        const filters = item.querySelector<HTMLElement>('[data-filters]')?.dataset.filters?.split(' ') ?? [];
+        item.hidden = role !== '' && !filters.includes(role);
+        if (!item.hidden) shown++;
+      }
+      for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.filter === role));
+      count.textContent = template.replace('{count}', String(shown)).replace('{total}', String(items.length));
+      if (updateUrl) {
+        const url = new URL(location.href);
+        if (role) url.searchParams.set('role', role);
+        else url.searchParams.delete('role');
+        history.replaceState(null, '', url);
+      }
+    };
+
+    for (const b of buttons) b.addEventListener('click', () => apply(b.dataset.filter!, true));
+    filter.hidden = false;
+    const initial = new URLSearchParams(location.search).get('role') ?? '';
+    if (initial && valid.has(initial)) apply(initial, false);
+  }
+</script>
+
+<style>
+  .filter {
+    display: grid;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  button {
+    min-height: var(--tap);
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-1);
+    cursor: pointer;
+  }
+  button:hover {
+    border-color: var(--ink-1);
+  }
+  button[aria-pressed='true'] {
+    background: var(--ink-1);
+    border-color: var(--ink-1);
+    color: var(--bg);
+  }
+  .count {
+    font-size: var(--step--1);
+  }
+</style>

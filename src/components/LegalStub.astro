@@ -1,0 +1,33 @@
+---
+/**
+ * Placeholder for the Impressum / Datenschutz pages until Phase 4 (and until the site owner fills in their data).
+ * Contains NO legal text on purpose: never invent legal details (see CLAUDE.md).
+ */
+import type { Locale } from '../config/site';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { useTranslations, type UiKey } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+  titleKey: UiKey;
+}
+const { locale, titleKey } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<BaseLayout locale={locale} title={t(titleKey)} description={t(titleKey)} noindex>
+  <div class="container page">
+    <h1>{t(titleKey)}</h1>
+    <p class="lead">{t('legal.stub')}</p>
+    {locale !== 'de' && <p class="muted">{t('legal.germanOnly')}</p>}
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: var(--space-4);
+    padding-top: var(--space-6);
+    max-width: 60ch;
+  }
+</style>
