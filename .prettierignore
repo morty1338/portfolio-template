@@ -6,3 +6,4 @@ package-lock.json
 content*/**/*.json
 docs/PLAYBOOK.md
 .claude/
+integrations/n8n/portfolio-contact.json

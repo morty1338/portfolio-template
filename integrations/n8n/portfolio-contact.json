@@ -1,0 +1,467 @@
+{
+  "name": "Portfolio contact form",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "portfolio-contact",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "0204ef57-0d0a-5070-b044-09991153dcb9",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "59dea3ae-6cf7-5f9e-8d8e-5a3890a82daf"
+    },
+    {
+      "parameters": {
+        "jsCode": "// \"Check signature\": accept only calls signed by the site's contact function (api/contact.ts).\n//   X-Portfolio-Timestamp: <unix seconds>\n//   X-Portfolio-Signature: sha256=<hex HMAC-SHA256(secret, \"<timestamp>.\" + raw body)>\n// Same rules as src/lib/signature.ts; tests/unit/n8n-code.test.ts signs with that module and runs this\n// script, so both sides must agree. The Webhook node needs the \"Raw Body\" option: re-serialised JSON\n// would never match the signature.\n//\n// Secret: WEBHOOK_SECRET in n8n's environment (needs N8N_BLOCK_ENV_ACCESS_IN_NODE=false and\n// NODE_FUNCTION_ALLOW_BUILTIN=crypto). Output: { ok, status, reason } or { ok: true, payload }.\nconst SETTINGS = {\"workflowName\":\"Portfolio contact form\",\"webhookPath\":\"portfolio-contact\",\"timezone\":\"Europe/Berlin\",\"maxAgeSeconds\":600,\"dedupeHours\":24,\"sheetName\":\"Leads\",\"columns\":[\"Received\",\"Name\",\"Company\",\"E-mail\",\"Message\",\"Came from\",\"Language\",\"Test\"],\"texts\":{\"en\":{\"subject\":\"Thank you for your message\",\"body\":\"Hello,\\n\\nthank you for your message. I have received it and will get back to you as soon as possible.\\n\\nBest regards\\n{owner}\\n\\nThis is an automatic reply to a message sent through the contact form on my website.\"},\"de\":{\"subject\":\"Vielen Dank für Ihre Nachricht\",\"body\":\"Guten Tag,\\n\\nvielen Dank für Ihre Nachricht. Ich habe sie erhalten und melde mich so bald wie möglich bei Ihnen.\\n\\nMit freundlichen Grüßen\\n{owner}\\n\\nDies ist eine automatische Antwort auf eine Nachricht über das Kontaktformular meiner Website.\"}}};\n\nconst crypto = require('crypto');\nconst reject = (status, reason) => [{ json: { ok: false, status, reason } }];\n\nlet secret = '';\ntry {\n  secret = $env.WEBHOOK_SECRET || '';\n} catch (e) {\n  secret = ''; // env access blocked: same answer as a missing secret\n}\nif (!secret) return reject(500, 'WEBHOOK_SECRET is not set in n8n');\n\nconst headers = $input.first().json.headers || {};\nconst ts = String(headers['x-portfolio-timestamp'] || '');\nconst given = String(headers['x-portfolio-signature'] || '');\nif (!/^\\d{1,12}$/.test(ts) || Math.abs(Date.now() / 1000 - Number(ts)) > SETTINGS.maxAgeSeconds) {\n  return reject(401, 'missing or expired timestamp');\n}\n\nlet raw;\ntry {\n  raw = await this.helpers.getBinaryDataBuffer(0, 'data');\n} catch (e) {\n  return reject(400, 'no raw body (turn on the Webhook option \"Raw Body\")');\n}\nconst expected =\n  'sha256=' +\n  crypto\n    .createHmac('sha256', secret)\n    .update(ts + '.')\n    .update(raw)\n    .digest('hex');\nconst a = Buffer.from(given);\nconst b = Buffer.from(expected);\n// Length check first: timingSafeEqual throws on different lengths.\nif (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return reject(401, 'bad signature');\n\nlet payload;\ntry {\n  payload = JSON.parse(raw.toString('utf8'));\n} catch (e) {\n  return reject(400, 'body is not JSON');\n}\nif (!payload || payload.event !== 'contact' || payload.version !== 1) return reject(400, 'unknown event');\nconst inquiry = payload.inquiry || {};\nfor (const field of ['name', 'email', 'message']) {\n  if (typeof inquiry[field] !== 'string' || !inquiry[field].trim()) return reject(400, `missing ${field}`);\n}\n\n// Idempotency: the site retries when an answer gets lost. The same body (same receivedAt) must not\n// create a second row or a second e-mail. Static data persists only for the active (published) workflow.\nconst key = crypto.createHash('sha256').update(raw).digest('hex');\nconst state = $getWorkflowStaticData('global');\nstate.contacts = state.contacts || {};\nconst now = Date.now();\nfor (const [k, at] of Object.entries(state.contacts)) {\n  if (now - at > SETTINGS.dedupeHours * 3600 * 1000) delete state.contacts[k];\n}\nif (state.contacts[key]) return [{ json: { ok: false, status: 200, reason: 'already processed' } }];\nstate.contacts[key] = now;\n\nreturn [{ json: { ok: true, status: 200, payload } }];\n"
+      },
+      "id": "576e56c8-1591-5aae-960a-94f8263e7559",
+      "name": "Check signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc22324b-4f51-5bea-a2c7-ec27581ed0c2",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ffa9f70b-65be-52eb-92f2-bae3243266ff",
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {
+          "responseCode": "200"
+        }
+      },
+      "id": "30bfca9f-ff3a-5ad7-9147-434aa89fec64",
+      "name": "Accept",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": $json.status < 300, \"reason\": $json.reason } }}",
+        "options": {
+          "responseCode": "={{ $json.status }}"
+        }
+      },
+      "id": "dbc79632-361b-5298-a602-81a031a8ef2e",
+      "name": "Refuse",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// \"Build messages\": the lead-list row and the e-mails for one verified inquiry. Plain text only.\n//\n// Rules:\n// - Test events (local runs, preview deployments) go only to CONTACT_TEST_EMAIL, never to real people.\n// - The auto-reply contains NO text from the form (not even the name): otherwise anyone could make this\n//   mailbox send arbitrary text to any address they type in.\n// - Sheet cells that start with = + - @ get a leading ' so Google Sheets doesn't run them as formulas.\n// Addresses come from n8n's environment: CONTACT_OWNER_EMAIL, CONTACT_FROM_EMAIL (default: owner),\n// CONTACT_OWNER_NAME, CONTACT_TEST_EMAIL.\nconst SETTINGS = {\"workflowName\":\"Portfolio contact form\",\"webhookPath\":\"portfolio-contact\",\"timezone\":\"Europe/Berlin\",\"maxAgeSeconds\":600,\"dedupeHours\":24,\"sheetName\":\"Leads\",\"columns\":[\"Received\",\"Name\",\"Company\",\"E-mail\",\"Message\",\"Came from\",\"Language\",\"Test\"],\"texts\":{\"en\":{\"subject\":\"Thank you for your message\",\"body\":\"Hello,\\n\\nthank you for your message. I have received it and will get back to you as soon as possible.\\n\\nBest regards\\n{owner}\\n\\nThis is an automatic reply to a message sent through the contact form on my website.\"},\"de\":{\"subject\":\"Vielen Dank für Ihre Nachricht\",\"body\":\"Guten Tag,\\n\\nvielen Dank für Ihre Nachricht. Ich habe sie erhalten und melde mich so bald wie möglich bei Ihnen.\\n\\nMit freundlichen Grüßen\\n{owner}\\n\\nDies ist eine automatische Antwort auf eine Nachricht über das Kontaktformular meiner Website.\"}}};\n\nconst env = (name) => {\n  try {\n    return String($env[name] || '');\n  } catch (e) {\n    return '';\n  }\n};\n\nconst { payload } = $input.first().json;\nconst inquiry = payload.inquiry;\nconst test = payload.test === true;\nconst lang = SETTINGS.texts[inquiry.locale] ? inquiry.locale : 'en';\n\nconst cell = (value) => {\n  const s = String(value == null ? '' : value);\n  return /^[=+\\-@\\t\\r]/.test(s) ? \"'\" + s : s;\n};\nconst oneLine = (value, max) =>\n  String(value == null ? '' : value)\n    .replace(/[\\r\\n]+/g, ' ')\n    .slice(0, max);\n\nconst received = new Intl.DateTimeFormat('sv-SE', {\n  timeZone: SETTINGS.timezone,\n  dateStyle: 'short',\n  timeStyle: 'short',\n}).format(new Date(payload.receivedAt));\n\nconst values = [\n  received,\n  inquiry.name,\n  inquiry.company,\n  inquiry.email,\n  inquiry.message,\n  inquiry.source,\n  lang,\n  test ? 'yes' : '',\n];\nconst row = {};\nSETTINGS.columns.forEach((column, i) => {\n  row[column] = cell(values[i]);\n});\n\nconst owner = env('CONTACT_OWNER_EMAIL');\nconst from = env('CONTACT_FROM_EMAIL') || owner;\nconst testTo = env('CONTACT_TEST_EMAIL');\nconst ownerTo = test ? testTo : owner;\nconst senderTo = test ? testTo : inquiry.email;\nconst prefix = test ? '[TEST] ' : '';\n\nconst ownerMail = {\n  to: ownerTo,\n  from,\n  replyTo: inquiry.email,\n  subject: prefix + oneLine(`New inquiry from ${inquiry.name}${inquiry.company ? ` (${inquiry.company})` : ''}`, 150),\n  text: [\n    `Name: ${inquiry.name}`,\n    `Company: ${inquiry.company || '-'}`,\n    `E-mail: ${inquiry.email}`,\n    `Came from: ${inquiry.source || '-'}`,\n    `Language: ${lang}`,\n    `Received: ${received} (${SETTINGS.timezone})`,\n    '',\n    inquiry.message,\n    '',\n    'Reply to this e-mail to answer the sender.',\n  ].join('\\n'),\n};\n\nconst texts = SETTINGS.texts[lang];\nconst senderMail = {\n  to: senderTo,\n  from,\n  subject: prefix + texts.subject,\n  text: texts.body.replace('{owner}', env('CONTACT_OWNER_NAME')),\n};\n\nlet skipReason = '';\nif (!from || !ownerTo) skipReason = test ? 'test event without CONTACT_TEST_EMAIL' : 'CONTACT_OWNER_EMAIL is not set';\n\nreturn [\n  {\n    json: {\n      test,\n      row,\n      ownerMail,\n      senderMail,\n      sendEmails: skipReason === '',\n      skipReason,\n      telegramText: oneLine(\n        `${prefix}New inquiry: ${inquiry.name}${inquiry.company ? ` (${inquiry.company})` : ''}`,\n        200,\n      ),\n    },\n  },\n];\n"
+      },
+      "id": "7dedd94b-6abd-546a-8f6b-bb1bb5550250",
+      "name": "Build messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.CONTACT_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Received": "={{ $json.row[\"Received\"] }}",
+            "Name": "={{ $json.row[\"Name\"] }}",
+            "Company": "={{ $json.row[\"Company\"] }}",
+            "E-mail": "={{ $json.row[\"E-mail\"] }}",
+            "Message": "={{ $json.row[\"Message\"] }}",
+            "Came from": "={{ $json.row[\"Came from\"] }}",
+            "Language": "={{ $json.row[\"Language\"] }}",
+            "Test": "={{ $json.row[\"Test\"] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Came from",
+              "displayName": "Came from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Test",
+              "displayName": "Test",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2658a19a-74d0-5ca4-b362-83a837575240",
+      "name": "Add to lead list",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleApi": {
+          "id": "",
+          "name": "Google service account – portfolio contact"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f959712c-3fa3-5da2-abe6-c848d1d3299c",
+              "leftValue": "={{ $('Build messages').item.json.sendEmails }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "437b51c7-1628-57fa-851a-6e160d2f3aa2",
+      "name": "E-mails allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Build messages').item.json.ownerMail.from }}",
+        "toEmail": "={{ $('Build messages').item.json.ownerMail.to }}",
+        "subject": "={{ $('Build messages').item.json.ownerMail.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $('Build messages').item.json.ownerMail.text }}",
+        "options": {
+          "appendAttribution": false,
+          "replyTo": "={{ $('Build messages').item.json.ownerMail.replyTo }}"
+        }
+      },
+      "id": "10a49cb2-34d1-554d-9e8b-e26cdd8b32cc",
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1540,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP – portfolio contact"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Build messages').item.json.senderMail.from }}",
+        "toEmail": "={{ $('Build messages').item.json.senderMail.to }}",
+        "subject": "={{ $('Build messages').item.json.senderMail.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $('Build messages').item.json.senderMail.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f50dbcef-f7e5-529e-95ad-373993a1cf58",
+      "name": "Auto-reply to sender",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP – portfolio contact"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.CONTACT_TELEGRAM_CHAT_ID }}",
+        "text": "={{ $('Build messages').item.json.telegramText }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "abefdf22-51c2-55ff-b2c8-41277fcc24fc",
+      "name": "Telegram (optional)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1980,
+        100
+      ],
+      "disabled": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram bot – portfolio contact"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check signature": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Accept",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refuse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept": {
+      "main": [
+        [
+          {
+            "node": "Build messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build messages": {
+      "main": [
+        [
+          {
+            "node": "Add to lead list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to lead list": {
+      "main": [
+        [
+          {
+            "node": "E-mails allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-mails allowed?": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Notify owner": {
+      "main": [
+        [
+          {
+            "node": "Auto-reply to sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-reply to sender": {
+      "main": [
+        [
+          {
+            "node": "Telegram (optional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {},
+  "active": false
+}

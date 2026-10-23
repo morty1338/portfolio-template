@@ -17,7 +17,8 @@
     "images:extract": "node scripts/extract-photos.mjs",
     "images:youtube": "node scripts/fetch-youtube-thumbnails.mjs",
     "check:dist": "node scripts/check-dist.mjs",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "n8n:build": "node integrations/n8n/build-workflow.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
