@@ -6,11 +6,11 @@
  * rules as the browser) → honeypot (silent success) → signed POST to the n8n webhook with retries.
  * The webhook URL is a secret: it is never logged or returned.
  */
-import { defaultLocale, LOCALES, type Locale } from '../config/locales';
-import { localizePath } from '../i18n/routing';
-import { validateContact, type ContactPayload } from './contact';
-import type { RateLimiter } from './rate-limit';
-import { sign, SIGNATURE_HEADER, TIMESTAMP_HEADER } from './signature';
+import { defaultLocale, LOCALES, type Locale } from '../config/locales.js';
+import { localizePath } from '../i18n/routing.js';
+import { validateContact, type ContactPayload } from './contact.js';
+import type { RateLimiter } from './rate-limit.js';
+import { sign, SIGNATURE_HEADER, TIMESTAMP_HEADER } from './signature.js';
 
 export const MAX_BODY_BYTES = 20_000;
 export const ATTEMPT_TIMEOUT_MS = 4_000;

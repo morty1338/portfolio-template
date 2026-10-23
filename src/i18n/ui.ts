@@ -4,7 +4,7 @@
  * TODO(review): German strings need the site owner's review.
  * Instance data (name, job, city) never goes here: use {name} or the profile content.
  */
-import type { Locale } from '../config/locales';
+import type { Locale } from '../config/locales.js';
 
 const en = {
   'skip.link': 'Skip to content',

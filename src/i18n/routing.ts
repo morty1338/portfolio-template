@@ -4,7 +4,7 @@
  * Every page lives under src/pages/[...lang]/, and `localeStaticPaths()` generates one
  * route per locale, so adding a locale in site.ts adds all its pages.
  */
-import { LOCALES, defaultLocale, type Locale } from '../config/locales';
+import { LOCALES, defaultLocale, type Locale } from '../config/locales.js';
 
 export const locales: readonly Locale[] = LOCALES;
 

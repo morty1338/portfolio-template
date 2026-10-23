@@ -7,8 +7,8 @@
  *   CONTACT_WEBHOOK_SECRET  shared HMAC secret, same value as WEBHOOK_SECRET in n8n
  * Without them the endpoint answers 503 and the form shows the "write an e-mail" fallback.
  */
-import { handleContact } from '../src/lib/contact-handler';
-import { createRateLimiter } from '../src/lib/rate-limit';
+import { handleContact } from '../src/lib/contact-handler.js';
+import { createRateLimiter } from '../src/lib/rate-limit.js';
 
 // 5 messages per IP per 10 minutes, per function instance.
 const limiter = createRateLimiter(5, 10 * 60_000);
